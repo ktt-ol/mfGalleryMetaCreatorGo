@@ -144,7 +144,7 @@ func updateImageMetaInfos(folder *mfg.FolderContent) {
 	title, timestamp, ok := parseTitleAndDateFromFoldername(folder.Name)
 	folder.Title = strings.Replace(title, "_", " ", -1)
 	if ok {
-		fTime := timestamp.UnixNano() / 1000
+		fTime := timestamp.UnixNano() / 1000 / 1000
 		folder.Time = &fTime
 	} else if oldestTime != math.MaxInt64 {
 		folder.Time = &oldestTime
@@ -180,10 +180,10 @@ func writeMetaFiles(folder *mfg.FolderContent, imageOrderFunction string, ccSize
 		sub.FolderName = subFolder.Name
 		sub.Title = subFolder.GetFolderTitle()
 		sub.Time = subFolder.Time
-		sub.ImageCount = len(subFolder.Files)
+		sub.ImageCount = sumFolderImageCount(subFolder)
 		if len(subFolder.Config.Cover) > 0 {
 			sub.Cover = &subFolder.Config.Cover
-		} else if sub.ImageCount > 0 {
+		} else if len(subFolder.Files) > 0 {
 			sub.Cover = &subFolder.Files[0]
 		}
 
@@ -200,6 +200,15 @@ func writeMetaFiles(folder *mfg.FolderContent, imageOrderFunction string, ccSize
 	if ccSize != -1 {
 		writeChromecastMetaFile(ccSize, meta.Images, folder)
 	}
+}
+
+// calculates the amount of photos of this folder inclusive all images in sub folders
+func sumFolderImageCount(folder *mfg.FolderContent) int {
+	sum := len(folder.Files)
+	for _, sub := range folder.Folder {
+		sum += sumFolderImageCount(&sub)
+	}
+	return sum
 }
 
 func writeChromecastMetaFile(ccSize int, images []mfg.MetaJsonImage, folder *mfg.FolderContent) {

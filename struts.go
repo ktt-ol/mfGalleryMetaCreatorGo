@@ -3,8 +3,8 @@ package mfGalleryMetaCreatorGo
 import (
 	"fmt"
 	"path"
-	"strings"
 	"strconv"
+	"strings"
 )
 
 type IntList []int
@@ -42,7 +42,7 @@ func (fc *FolderContent) GetFolderTitle() string {
 	if len(fc.Config.Title) > 0 {
 		return fc.Config.Title
 	}
-	return fc.Name
+	return fc.Title
 }
 
 func (fc *FolderContent) String() string {

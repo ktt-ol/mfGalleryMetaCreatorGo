@@ -1,0 +1,10 @@
+package: github.com/ktt-ol/mfGalleryMetaCreatorGo
+import:
+- package: github.com/disintegration/imaging
+  version: ~1.0.0
+- package: github.com/go-ini/ini
+  version: ~1.25.2
+- package: github.com/xor-gate/goexif2
+  subpackages:
+  - exif
+  - tiff

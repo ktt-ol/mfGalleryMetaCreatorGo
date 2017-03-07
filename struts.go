@@ -4,7 +4,24 @@ import (
 	"fmt"
 	"path"
 	"strings"
+	"strconv"
 )
+
+type IntList []int
+
+func (i *IntList) String() string {
+	return fmt.Sprintf("%d", *i)
+}
+func (i *IntList) Set(value string) error {
+	tmp, err := strconv.ParseUint(value, 10, 16)
+
+	if err != nil {
+		*i = append(*i, 0)
+	} else {
+		*i = append(*i, int(tmp))
+	}
+	return nil
+}
 
 type FolderContent struct {
 	FullPath      string

@@ -12,8 +12,6 @@ import (
 	"strconv"
 	"strings"
 
-	"image/jpeg"
-
 	"image"
 
 	"sort"
@@ -21,45 +19,15 @@ import (
 
 	"math"
 
-	"runtime/debug"
-
 	"errors"
 
-	"github.com/disintegration/imaging"
 	"github.com/go-ini/ini"
 	mfg "github.com/ktt-ol/mfGalleryMetaCreatorGo"
 	"github.com/xor-gate/goexif2/exif"
 	"github.com/xor-gate/goexif2/tiff"
 )
 
-const (
-	FILE_REGEXP          = `(?i)\.jpe?g$`
-	THUMB_DIR            = ".go_thumbs"
-	CONTENT_INI          = "content.ini"
-	META_NAME            = "go_meta.json"
-	META_NAME_CHROMECAST = "go_meta_cc.jsonp.js"
-	MAX_PROCESS_SPAWNS   = 5
-	CC_PREFIX            = "ifsImagesDataCallback("
-	CC_SUFFIX            = ");"
-)
-
-type intList []int
-
-func (i *intList) String() string {
-	return fmt.Sprintf("%d", *i)
-}
-func (i *intList) Set(value string) error {
-	tmp, err := strconv.ParseUint(value, 10, 16)
-
-	if err != nil {
-		*i = append(*i, 0)
-	} else {
-		*i = append(*i, int(tmp))
-	}
-	return nil
-}
-
-var filePattern = regexp.MustCompile(FILE_REGEXP)
+var filePattern = regexp.MustCompile(mfg.FILE_REGEXP)
 
 // folder date pattern
 var ymdPattern = regexp.MustCompile(`^(\d{4})-(\d{2})-(\d{2})_(.*)$`)
@@ -68,11 +36,11 @@ var yPattern = regexp.MustCompile(`^(\d{4})_(.*)$`)
 
 func main() {
 	imagePathPtr := flag.String("path", "", "the path to the images (required)")
-	var sizes intList
+	var sizes mfg.IntList
 	flag.Var(&sizes, "size", "the bounding box of the thumbnails (required). You can use this parameter more than once.")
 	orderPtr := flag.String("order", mfg.IMAGE_ORDER_FUNCTIONS[0], strings.Join(mfg.IMAGE_ORDER_FUNCTIONS[:], ","))
 	ccSizePtr := flag.Int("cc-size", -1, "creates a jsonp file for the Chromecast for this thumbnail size.")
-	forceUpdatePtr := flag.Bool("force-update", false, "ignores the existing "+META_NAME+" files.")
+	forceUpdatePtr := flag.Bool("force-update", false, "ignores the existing "+mfg.META_NAME+" files.")
 
 	flag.Parse()
 
@@ -92,11 +60,11 @@ func main() {
 
 	updateImageMetaInfos(content)
 	log.Println(content)
-	updateThumbnails(content, sizes)
+	mfg.UpdateThumbnails(content, sizes)
 	writeMetaFiles(content, *orderPtr, *ccSizePtr)
 }
 
-func checkSizes(sizes intList) {
+func checkSizes(sizes mfg.IntList) {
 	for _, size := range sizes {
 		if size <= 0 {
 			log.Fatal("Invalid size: ", size)
@@ -104,7 +72,7 @@ func checkSizes(sizes intList) {
 	}
 }
 
-func addSizeIfNeeded(sizeList intList, ccSize int) intList {
+func addSizeIfNeeded(sizeList mfg.IntList, ccSize int) mfg.IntList {
 	if ccSize == -1 {
 		return sizeList
 	}
@@ -122,7 +90,7 @@ func readFolder(folder string, forceUpdate bool) *mfg.FolderContent {
 	content.ImageMetadata = make(map[string]mfg.MetaJsonImage)
 
 	files, err := ioutil.ReadDir(folder)
-	checkError(err)
+	mfg.CheckError(err)
 	for _, file := range files {
 		// skip .xxxx folder/files
 		if strings.HasPrefix(file.Name(), ".") {
@@ -136,13 +104,13 @@ func readFolder(folder string, forceUpdate bool) *mfg.FolderContent {
 			continue
 		}
 
-		if file.Name() == CONTENT_INI {
+		if file.Name() == mfg.CONTENT_INI {
 			log.Println("Content INI file found in ", folder)
 			content.Config = readIniFile(fullPath)
 			continue
 		}
 
-		if !forceUpdate && file.Name() == META_NAME {
+		if !forceUpdate && file.Name() == mfg.META_NAME {
 			log.Println("Previous generated meta file found in ", folder)
 			readPrevImageInfos(content.ImageMetadata, fullPath)
 			continue
@@ -187,27 +155,6 @@ func updateImageMetaInfos(folder *mfg.FolderContent) {
 	}
 }
 
-func updateThumbnails(folder *mfg.FolderContent, sizeList intList) {
-	thumbFolder := path.Join(folder.FullPath, THUMB_DIR)
-	if _, err := os.Stat(thumbFolder); os.IsNotExist(err) {
-		os.Mkdir(thumbFolder, 0755)
-	}
-	for _, imgFile := range folder.Files {
-		meta, _ := folder.ImageMetadata[imgFile]
-		fullPathImage := folder.GetFullPathFile(imgFile)
-		for _, size := range sizeList {
-			targetFile := path.Join(thumbFolder, fmt.Sprintf("%d-%s", size, imgFile))
-			if _, err := os.Stat(targetFile); os.IsNotExist(err) {
-				createThumbnail(fullPathImage, targetFile, size, meta.Rotate)
-			}
-		}
-	}
-
-	for i := range folder.Folder {
-		updateThumbnails(&folder.Folder[i], sizeList)
-	}
-}
-
 func writeMetaFiles(folder *mfg.FolderContent, imageOrderFunction string, ccSize int) {
 	log.Println("Writing meta file for ", folder.Name)
 	meta := mfg.MetaJson{}
@@ -245,32 +192,33 @@ func writeMetaFiles(folder *mfg.FolderContent, imageOrderFunction string, ccSize
 
 	sort.Sort(mfg.ByTimeDesc{meta.SubDirs})
 
-	metaFileFullPath := path.Join(folder.FullPath, META_NAME)
+	metaFileFullPath := path.Join(folder.FullPath, mfg.META_NAME)
 	bytes, err := json.Marshal(meta)
-	checkError(err, "Can't write meta file.")
+	mfg.CheckError(err, "Can't write meta file.")
 	ioutil.WriteFile(metaFileFullPath, bytes, 0644)
 
 	if ccSize != -1 {
 		writeChromecastMetaFile(ccSize, meta.Images, folder)
 	}
 }
+
 func writeChromecastMetaFile(ccSize int, images []mfg.MetaJsonImage, folder *mfg.FolderContent) {
 	log.Println("Writing Chromecast meta file for ", folder.Name)
 	var ccImages = make([]mfg.ChromecastImage, len(images))
 	for i, image := range images {
-		filename := fmt.Sprintf("%s/%d-%s", THUMB_DIR, ccSize, image.Filename)
+		filename := fmt.Sprintf("%s/%d-%s", mfg.THUMB_DIR, ccSize, image.Filename)
 		ccImages[i] = mfg.ChromecastImage{filename, image.Width, image.Height, image.Exif.Time}
 	}
 
-	ccFilename := folder.FullPath + "/" + META_NAME_CHROMECAST
+	ccFilename := folder.FullPath + "/" + mfg.META_NAME_CHROMECAST
 	bytes, err := json.Marshal(ccImages)
-	checkError(err, "Can't write Chromecast meta file.")
+	mfg.CheckError(err, "Can't write Chromecast meta file.")
 	f, err := os.OpenFile(ccFilename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-	checkError(err)
+	mfg.CheckError(err)
 	defer f.Close()
-	f.Write([]byte(CC_PREFIX))
+	f.Write([]byte(mfg.CC_PREFIX))
 	f.Write(bytes)
-	f.Write([]byte(CC_SUFFIX))
+	f.Write([]byte(mfg.CC_SUFFIX))
 }
 
 func parseTitleAndDateFromFoldername(filename string) (string, time.Time, bool) {
@@ -302,11 +250,11 @@ func readImageInfo(filename, input string) mfg.MetaJsonImage {
 	log.Println("Read image meta info from ", input)
 
 	f, err := os.Open(input)
-	checkError(err)
+	mfg.CheckError(err)
 	defer f.Close()
 
 	imageConfig, _, err := image.DecodeConfig(f)
-	checkError(err)
+	mfg.CheckError(err)
 	imageMeta := mfg.MetaJsonImage{Filename: filename, Width: imageConfig.Width, Height: imageConfig.Height}
 
 	// reset the file pointer
@@ -319,21 +267,21 @@ func readImageInfo(filename, input string) mfg.MetaJsonImage {
 	}
 
 	camModel, err := x.Get(exif.Model)
-	checkError(err)
+	mfg.CheckError(err)
 	model, err := camModel.StringVal()
-	checkError(err)
+	mfg.CheckError(err)
 	model = strings.TrimSpace(model)
 	imageMeta.Exif.Model = &model
 
 	camMaker, err := x.Get(exif.Make)
-	checkError(err)
+	mfg.CheckError(err)
 	maker, err := camMaker.StringVal()
-	checkError(err)
+	mfg.CheckError(err)
 	maker = strings.TrimSpace(maker)
 	imageMeta.Exif.Make = &maker
 
 	datetime, err := getExifTime(x)
-	checkError(err)
+	mfg.CheckError(err)
 	timeInMS := datetime.UnixNano() / 1000 / 1000
 	imageMeta.Exif.Time = &timeInMS
 
@@ -386,49 +334,6 @@ func getExifTime(x *exif.Exif) (time.Time, error) {
 	return time.ParseInLocation(exifTimeLayout, dateStr, timeZone)
 }
 
-func checkError(err error, messages ...string) {
-	if err == nil {
-		return
-	}
-	debug.PrintStack()
-	log.Fatal(strings.Join(messages, " "), "\nError: ", err)
-}
-
-func createThumbnail(input string, output string, size int, rotationAction mfg.RotationAction) {
-	log.Printf("Create thumbnail (%d) for %s (%d)\n", size, input, rotationAction)
-	if size <= 0 {
-		log.Fatal("Invalid thumbnail size: ", size)
-	}
-
-	file, err := os.Open(input)
-	checkError(err, "Can't open image file.")
-	defer file.Close()
-
-	// decode jpeg into image.Image
-	img, err := jpeg.Decode(file)
-	checkError(err, "Can't decode image file.")
-
-	thumbnail := imaging.Fit(img, size, size, imaging.Linear)
-
-	switch rotationAction {
-	case mfg.ROTATE_90:
-		thumbnail = imaging.Rotate90(thumbnail)
-		break
-	case mfg.ROTATE_180:
-		thumbnail = imaging.Rotate180(thumbnail)
-		break
-	case mfg.ROTATE_270:
-		thumbnail = imaging.Rotate270(thumbnail)
-		break
-	}
-
-	out, err := os.Create(output)
-	checkError(err, "Can't write jpeg file.")
-	defer out.Close()
-
-	jpeg.Encode(out, thumbnail, nil)
-}
-
 func isValidOrder(value string) bool {
 	for i := 0; i < len(mfg.IMAGE_ORDER_FUNCTIONS); i++ {
 		if value == mfg.IMAGE_ORDER_FUNCTIONS[i] {
@@ -440,9 +345,9 @@ func isValidOrder(value string) bool {
 
 func readIniFile(iniFile string) mfg.FolderConfig {
 	cfg, err := ini.Load(iniFile)
-	checkError(err, "Error reading ini file.", iniFile)
+	mfg.CheckError(err, "Error reading ini file.", iniFile)
 	section, err := cfg.GetSection("")
-	checkError(err, "Error reading section file.", iniFile)
+	mfg.CheckError(err, "Error reading section file.", iniFile)
 
 	config := mfg.FolderConfig{}
 	title, err := section.GetKey("title")
@@ -463,11 +368,11 @@ func readIniFile(iniFile string) mfg.FolderConfig {
 
 func readPrevImageInfos(metaMap map[string]mfg.MetaJsonImage, jsonFile string) {
 	bytes, err := ioutil.ReadFile(jsonFile)
-	checkError(err, "Error reading json file.")
+	mfg.CheckError(err, "Error reading json file.")
 
 	var jsonContent mfg.MetaJson
 	err = json.Unmarshal(bytes, &jsonContent)
-	checkError(err, "Invalid json in file.")
+	mfg.CheckError(err, "Invalid json in file.")
 	for _, imgInfo := range jsonContent.Images {
 		metaMap[imgInfo.Filename] = imgInfo
 	}

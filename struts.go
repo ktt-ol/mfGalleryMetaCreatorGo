@@ -63,7 +63,6 @@ func (fc *FolderContent) StringWithIntent(intention int) string {
 %sfiles: len -> %d
 %stime: %d
 %stitle: %s
-%sprevImages: %s
 %sfolder:
 %s`, intent, fc.FullPath,
 		intent, fc.Name,
@@ -71,7 +70,6 @@ func (fc *FolderContent) StringWithIntent(intention int) string {
 		intent, len(fc.Files),
 		intent, fc.Time,
 		intent, fc.Title,
-		intent, "TODO",
 		intent,
 		sub)
 }
@@ -86,8 +84,7 @@ type FolderConfig struct {
 }
 
 type MetaJson struct {
-	Meta MetaJsonMeta `json:"meta"`
-	// TODO use pointer
+	Meta    MetaJsonMeta     `json:"meta"`
 	Images  []MetaJsonImage  `json:"images"`
 	SubDirs []MetaJsonSubDir `json:"subDirs"`
 }

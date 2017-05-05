@@ -277,24 +277,24 @@ func readImageInfo(filename, input string) mfg.MetaJsonImage {
 		return imageMeta
 	}
 
-	camModel, err := x.Get(exif.Model)
-	mfg.CheckError(err)
-	model, err := camModel.StringVal()
-	mfg.CheckError(err)
-	model = strings.TrimSpace(model)
-	imageMeta.Exif.Model = &model
+	if camModel, err := x.Get(exif.Model); err == nil {
+		if model, err := camModel.StringVal(); err == nil {
+			model = strings.TrimSpace(model)
+			imageMeta.Exif.Model = &model
+		}
+	}
 
-	camMaker, err := x.Get(exif.Make)
-	mfg.CheckError(err)
-	maker, err := camMaker.StringVal()
-	mfg.CheckError(err)
-	maker = strings.TrimSpace(maker)
-	imageMeta.Exif.Make = &maker
+	if camMaker, err := x.Get(exif.Make); err == nil {
+		if maker, err := camMaker.StringVal(); err == nil {
+			maker = strings.TrimSpace(maker)
+			imageMeta.Exif.Make = &maker
+		}
+	}
 
-	datetime, err := getExifTime(x)
-	mfg.CheckError(err)
-	timeInMS := datetime.UnixNano() / 1000 / 1000
-	imageMeta.Exif.Time = &timeInMS
+	if datetime, err := getExifTime(x); err == nil {
+		timeInMS := datetime.UnixNano() / 1000 / 1000
+		imageMeta.Exif.Time = &timeInMS
+	}
 
 	imageMeta.Rotate = mfg.NO_ROTATION
 	if orientation, err := x.Get(exif.Orientation); err == nil {

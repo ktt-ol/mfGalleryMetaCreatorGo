@@ -130,7 +130,7 @@ func readFolder(folder string, forceUpdate bool) *mfg.FolderContent {
 
 // reads recursively all meta data, if needed
 func updateImageMetaInfos(folder *mfg.FolderContent) {
-	var oldestTime int64 = math.MaxInt64
+	var newestTime int64 = math.MinInt64
 	for _, imgFile := range folder.Files {
 		imgMeta, exists := folder.ImageMetadata[imgFile]
 		if !exists {
@@ -138,22 +138,27 @@ func updateImageMetaInfos(folder *mfg.FolderContent) {
 			folder.ImageMetadata[imgFile] = imgMeta
 		}
 
-		if imgMeta.Exif.Time != nil && *imgMeta.Exif.Time < oldestTime {
-			oldestTime = *imgMeta.Exif.Time
+		if imgMeta.Exif.Time != nil && *imgMeta.Exif.Time > newestTime {
+			newestTime = *imgMeta.Exif.Time
 		}
 	}
 
 	title, timestamp, ok := parseTitleAndDateFromFoldername(folder.Name)
 	folder.Title = strings.Replace(title, "_", " ", -1)
+
 	if ok {
 		fTime := timestamp.UnixNano() / 1000 / 1000
 		folder.Time = &fTime
-	} else if oldestTime != math.MaxInt64 {
-		folder.Time = &oldestTime
+	} else if newestTime != math.MinInt64 {
+		folder.Time = &newestTime
 	}
 
 	for i := range folder.Folder {
 		updateImageMetaInfos(&folder.Folder[i])
+		// update the folder time if any sub folder has a newer time
+		if folder.Time == nil || (folder.Folder[i].Time != nil && *folder.Time < *folder.Folder[i].Time) {
+			folder.Time = folder.Folder[i].Time
+		}
 	}
 }
 
@@ -172,7 +177,6 @@ func writeMetaFiles(folder *mfg.FolderContent, imageOrderFunction string, ccSize
 	mfg.SortImages(imageOrderFunction, meta.Images)
 
 	meta.Meta.Title = folder.GetFolderTitle()
-	meta.Meta.Time = folder.Time
 	meta.Meta.Description = folder.Config.Description
 
 	meta.SubDirs = make([]mfg.MetaJsonSubDir, len(folder.Folder))
@@ -191,6 +195,9 @@ func writeMetaFiles(folder *mfg.FolderContent, imageOrderFunction string, ccSize
 
 		writeMetaFiles(subFolder, imageOrderFunction, ccSize)
 	}
+
+	// all sub dirs are read -> sets the time
+	meta.Meta.Time = folder.Time // default
 
 	sort.Sort(mfg.ByTimeDesc{meta.SubDirs})
 

@@ -20,7 +20,7 @@ func SortImages(orderFunctionName string, images JsonImages) {
 		sort.Sort(byFilenameAsc{images})
 		break
 	case IMAGE_ORDER_FUNCTIONS[3]:
-		sort.Sort(byExifTimeDesc{images})
+		sort.Sort(byFilenameDesc{images})
 		break
 	default:
 		log.Fatal("Not supported:", orderFunctionName)

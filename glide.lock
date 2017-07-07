@@ -1,17 +1,19 @@
-hash: 5ae8c527ae3d5da6a8e32262b574327d0d1412278a6ff5bbb2a737332cabf00a
-updated: 2017-03-07T20:04:17.412341934+01:00
+hash: 42b55683411b50c68628d0783e08ca26f340a5097a458aa395688a57fffb9916
+updated: 2017-07-07T21:17:45.671083076+02:00
 imports:
 - name: github.com/disintegration/imaging
   version: 243d2d8673c1225a6afceeb9b3b4423d485dc8df
 - name: github.com/go-ini/ini
-  version: 74bdc99692c3408cb103221e38675ce8fda0a718
+  version: 98c45284d68a05a0e0a576de574bd975946ef9ad
+- name: github.com/stretchr/testify
+  version: 69483b4bd14f5845b5a1e55bca19e954e827f1d0
 - name: github.com/xor-gate/goexif2
-  version: dc7dbd330014c9a79636ae7bbd5232a65106186c
+  version: f00bf380483f8b9fdcb73f8acee158e780166c4b
   subpackages:
   - exif
   - tiff
 - name: golang.org/x/image
-  version: 069db1da13841f750892417d97b1b059aec960cd
+  version: 426cfd8eeb6e08ab1932954e09e3c2cb2bc6e36d
   subpackages:
   - bmp
   - tiff

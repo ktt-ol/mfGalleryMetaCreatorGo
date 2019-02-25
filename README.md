@@ -4,9 +4,8 @@ Replacement for https://github.com/ktt-ol/mfGalleryMetaCreator
 
 ## Build 
 
-* Install https://github.com/Masterminds/glide 
-* `glide install`
-* `go build cli/makeMeta.go`
+* `dep ensure install`
+* `go build cli/makeMeta.go` or use `./buildStatic.sh` 
 
 Or use the docker image to build for linux amd64. See [docker-img/README.md] for details. 
 
@@ -22,6 +21,8 @@ Usage of ./makeMeta:
     	activates debug logging.
   -force-update
     	ignores the existing meta.json files.
+  -max-threads int
+    	The maximum amount of threads to use. Default is the number of cpu. (default -1)
   -order string
     	exifTimeAsc,exifTimeDesc,filenameAsc,filenameDesc (default "exifTimeAsc")
   -path string
@@ -55,6 +56,3 @@ Important: Don't add any spaces between the equal (=) sign.
 * `description` of the folder. The default is none.
 * `cover` sets the cover image for the album. The default is the first image in the album.
 
-# Libs
-
-* Uses https://github.com/Masterminds/glide for dependency management

@@ -41,6 +41,7 @@ func main() {
 	orderPtr := flag.String("order", mfg.IMAGE_ORDER_FUNCTIONS[0], strings.Join(mfg.IMAGE_ORDER_FUNCTIONS[:], ","))
 	ccSizePtr := flag.Int("cc-size", -1, "creates a jsonp file for the Chromecast for this thumbnail size.")
 	forceUpdatePtr := flag.Bool("force-update", false, "ignores the existing "+mfg.META_NAME+" files.")
+	maxThreads := flag.Int("max-threads", -1, "The maximum amount of threads to use. Default is the number of cpu.")
 	debug := flag.Bool("debug", false, "activates debug logging.")
 
 	flag.Parse()
@@ -62,7 +63,7 @@ func main() {
 	if *debug {
 		log.Printf("Data model:\n%s\n", content)
 	}
-	mfg.UpdateThumbnails(content, sizes)
+	mfg.UpdateThumbnails(content, sizes, *maxThreads)
 	writeMetaFiles(content, *orderPtr, *ccSizePtr)
 }
 

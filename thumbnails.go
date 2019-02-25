@@ -2,14 +2,16 @@ package mfGalleryMetaCreatorGo
 
 import (
 	"fmt"
-	"image/jpeg"
 	"log"
 	"os"
 	"path"
 
 	"runtime"
 
+	"github.com/pixiv/go-libjpeg/jpeg"
 	"github.com/disintegration/imaging"
+	"image"
+	"bufio"
 )
 
 type payload struct {
@@ -22,8 +24,13 @@ type payload struct {
 // Creates thumbnails recursively for the given folder using a thread pool with NumCPU of threads.
 // folder - works on this folder
 // sizeList - creates thumbnails for this sizes. The size represents the maximum bounding box.
-func UpdateThumbnails(folder *FolderContent, sizeList IntList) {
-	maxWorker := runtime.GOMAXPROCS(runtime.NumCPU())
+func UpdateThumbnails(folder *FolderContent, sizeList IntList, maxThreads int) {
+	var maxWorker int
+	if maxThreads <= 0 {
+		maxWorker = runtime.GOMAXPROCS(runtime.NumCPU())
+	} else {
+		maxWorker = maxThreads
+	}
 
 	jobs := make(chan payload)
 	workerDone := make(chan bool)
@@ -47,6 +54,8 @@ func thumbnailWorker(id int, jobs <-chan payload, done chan<- bool) {
 	counter := 0
 	for job := range jobs {
 		createThumbnail(job.input, job.output, job.size, job.rotationAction)
+		// this helps to reduce the max memory usage
+		runtime.GC()
 		counter++
 	}
 	log.Printf("Thumbnail worker (%d) finished. Jobs done: %d.", id, counter)
@@ -80,31 +89,57 @@ func createThumbnail(input string, output string, size int, rotationAction Rotat
 		log.Fatal("Invalid thumbnail size: ", size)
 	}
 
+	// https://github.com/libjpeg-turbo/libjpeg-turbo/issues/206#issuecomment-357151653
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
 	file, err := os.Open(input)
 	CheckError(err, "Can't open image file.")
 	defer file.Close()
 
-	// decode jpeg into image.Image
-	img, err := jpeg.Decode(file)
+	img, err := jpeg.Decode(file, &jpeg.DecoderOptions{ScaleTarget: image.Rectangle{
+		Min: image.Point{X: 0, Y: 0},
+		Max: image.Point{X: size, Y: size},
+	}})
 	CheckError(err, "Can't decode image file.")
 
-	thumbnail := imaging.Fit(img, size, size, imaging.Linear)
+	img = imaging.Fit(img, size, size, imaging.Linear)
 
 	switch rotationAction {
 	case ROTATE_90:
-		thumbnail = imaging.Rotate90(thumbnail)
+		img = imaging.Rotate90(img)
 		break
 	case ROTATE_180:
-		thumbnail = imaging.Rotate180(thumbnail)
+		img = imaging.Rotate180(img)
 		break
 	case ROTATE_270:
-		thumbnail = imaging.Rotate270(thumbnail)
+		img = imaging.Rotate270(img)
 		break
+	}
+
+	// libjpeg can't handle NRGBA
+	var rgba *image.RGBA
+	if nrgba, ok := img.(*image.NRGBA); ok {
+		if nrgba.Opaque() {
+			rgba = &image.RGBA{
+				Pix:    nrgba.Pix,
+				Stride: nrgba.Stride,
+				Rect:   nrgba.Rect,
+			}
+		}
 	}
 
 	out, err := os.Create(output)
 	CheckError(err, "Can't write jpeg file.")
 	defer out.Close()
 
-	jpeg.Encode(out, thumbnail, nil)
+	w := bufio.NewWriter(out)
+
+	if rgba == nil {
+		err = jpeg.Encode(w, img, &jpeg.EncoderOptions{Quality: 75})
+	} else {
+		err = jpeg.Encode(w, rgba, &jpeg.EncoderOptions{Quality: 75})
+	}
+	CheckError(err, "Can't encode image file")
+	w.Flush()
 }

@@ -42,7 +42,8 @@ func main() {
 	ccSizePtr := flag.Int("cc-size", -1, "creates a jsonp file for the Chromecast for this thumbnail size.")
 	forceUpdatePtr := flag.Bool("force-update", false, "ignores the existing "+mfg.META_NAME+" files.")
 	maxThreads := flag.Int("max-threads", -1, "The maximum amount of threads to use. Default is the number of cpu.")
-	lastXMeta := flag.Int("last-x-meta", -1, "if > 0, create the additional file 'meta-last.json' with the last X images.")
+	firstXMeta := flag.Int("first-x-meta", -1, "if > 0, create the additional file '"+mfg.META_NAME_FIRST_X+"' with the first X images.")
+	lastXMeta := flag.Int("last-x-meta", -1, "if > 0, create the additional file '"+mfg.META_NAME_LAST_X+"' with the last X images.")
 	debug := flag.Bool("debug", false, "activates debug logging.")
 
 	flag.Parse()
@@ -65,7 +66,7 @@ func main() {
 		log.Printf("Data model:\n%s\n", content)
 	}
 	mfg.UpdateThumbnails(content, sizes, *maxThreads)
-	writeMetaFiles(content, *orderPtr, *ccSizePtr, *lastXMeta)
+	writeMetaFiles(content, *orderPtr, *ccSizePtr, *firstXMeta, *lastXMeta)
 }
 
 func checkSizes(sizes mfg.IntList) {
@@ -164,7 +165,7 @@ func updateImageMetaInfos(folder *mfg.FolderContent) {
 	}
 }
 
-func writeMetaFiles(folder *mfg.FolderContent, imageOrderFunction string, ccSize int, lastXMeta int) {
+func writeMetaFiles(folder *mfg.FolderContent, imageOrderFunction string, ccSize int, firstXMeta int, lastXMeta int) {
 	log.Println("Writing meta file for ", folder.Name)
 	meta := mfg.MetaJson{}
 	meta.Images = make([]mfg.MetaJsonImage, len(folder.Files))
@@ -195,7 +196,7 @@ func writeMetaFiles(folder *mfg.FolderContent, imageOrderFunction string, ccSize
 			sub.Cover = &subFolder.Files[0]
 		}
 
-		writeMetaFiles(subFolder, imageOrderFunction, ccSize, lastXMeta)
+		writeMetaFiles(subFolder, imageOrderFunction, ccSize, firstXMeta, lastXMeta)
 	}
 
 	// all sub dirs are read -> sets the time
@@ -203,18 +204,28 @@ func writeMetaFiles(folder *mfg.FolderContent, imageOrderFunction string, ccSize
 
 	sort.Sort(mfg.ByTimeDesc{meta.SubDirs})
 
-	metaFileFullPath := path.Join(folder.FullPath, mfg.META_NAME)
-	bytes, err := json.Marshal(meta)
-	mfg.CheckError(err, "Can't write meta file.")
-	ioutil.WriteFile(metaFileFullPath, bytes, 0644)
+	writeAsJson(meta, path.Join(folder.FullPath, mfg.META_NAME))
 
 	if ccSize != -1 {
 		writeChromecastMetaFile(ccSize, meta.Images, folder)
 	}
 
+	if firstXMeta > 0 {
+		end := firstXMeta
+		if end > len(meta.Images) {
+			end = len(meta.Images)
+		}
+		firstXMeta := mfg.MetaJson{
+			Meta:    meta.Meta,
+			SubDirs: meta.SubDirs,
+			Images:  meta.Images[0:end],
+		}
+		writeAsJson(firstXMeta, path.Join(folder.FullPath, mfg.META_NAME_FIRST_X))
+	}
+
 	if lastXMeta > 0 {
 		start := len(meta.Images) - lastXMeta
-		if start < 0  {
+		if start < 0 {
 			start = 0
 		}
 		lastXMeta := mfg.MetaJson{
@@ -222,12 +233,14 @@ func writeMetaFiles(folder *mfg.FolderContent, imageOrderFunction string, ccSize
 			SubDirs: meta.SubDirs,
 			Images:  meta.Images[start:],
 		}
-
-		metaFileFullPath := path.Join(folder.FullPath, mfg.META_NAME_LAST_X)
-		bytes, err := json.Marshal(lastXMeta)
-		mfg.CheckError(err, "Can't write last-meta file.")
-		ioutil.WriteFile(metaFileFullPath, bytes, 0644)
+		writeAsJson(lastXMeta, path.Join(folder.FullPath, mfg.META_NAME_LAST_X))
 	}
+}
+
+func writeAsJson(jsonData interface{}, target string) {
+	bytes, err := json.Marshal(jsonData)
+	mfg.CheckError(err, "Can't write json file.")
+	_ = ioutil.WriteFile(target, bytes, 0644)
 }
 
 // calculates the amount of photos of this folder inclusive all images in sub folders

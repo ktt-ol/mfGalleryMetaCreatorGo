@@ -2,55 +2,91 @@
 
 
 [[projects]]
+  digest = "1:0deddd908b6b4b768cfc272c16ee61e7088a60f7fe2f06c547bd3d8e1f8b8e77"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
+  pruneopts = ""
   revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
   version = "v1.1.1"
 
 [[projects]]
+  digest = "1:e5e2c5a5551878d55ac9bb1b1ddf8121116299c074220c5ce447c3f2641036a2"
   name = "github.com/disintegration/imaging"
   packages = ["."]
+  pruneopts = ""
   revision = "243d2d8673c1225a6afceeb9b3b4423d485dc8df"
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:442aa34269d256e1506b5d5d45ef38571ff075cdb5614834f1a28ffb24aaed22"
   name = "github.com/go-ini/ini"
   packages = ["."]
+  pruneopts = ""
   revision = "98c45284d68a05a0e0a576de574bd975946ef9ad"
   version = "v1.25.5"
 
 [[projects]]
+  digest = "1:cfb454481914b0626df2e5f175b281e7a4c9a2ff6d5b655f34489c2db185d580"
   name = "github.com/pixiv/go-libjpeg"
-  packages = ["jpeg","rgb"]
+  packages = [
+    "jpeg",
+    "rgb",
+  ]
+  pruneopts = ""
   revision = "c49be700eba7cab5904c763ae8f0a0e2c5786c35"
   version = "v0.2"
 
 [[projects]]
+  digest = "1:256484dbbcd271f9ecebc6795b2df8cad4c458dd0f5fd82a8c2fa0c29f233411"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
+  pruneopts = ""
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:3926a4ec9a4ff1a072458451aa2d9b98acd059a45b38f7335d31e06c3d6a0159"
   name = "github.com/stretchr/testify"
-  packages = ["assert","require"]
+  packages = [
+    "assert",
+    "require",
+  ]
+  pruneopts = ""
   revision = "69483b4bd14f5845b5a1e55bca19e954e827f1d0"
   version = "v1.1.4"
 
 [[projects]]
+  digest = "1:6ceeb17ae8e9749caa64ca827b8f9d709aaa80c29cabcac4bda56a555c844eb9"
   name = "github.com/xor-gate/goexif2"
-  packages = ["exif","tiff"]
+  packages = [
+    "exif",
+    "tiff",
+  ]
+  pruneopts = ""
   revision = "f00bf380483f8b9fdcb73f8acee158e780166c4b"
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:0b3941ef08e144f30c8df8093374e0660ad45f6f6c6b71a7c03282d202b7d85d"
   name = "golang.org/x/image"
-  packages = ["bmp","tiff","tiff/lzw"]
+  packages = [
+    "bmp",
+    "tiff",
+    "tiff/lzw",
+  ]
+  pruneopts = ""
   revision = "426cfd8eeb6e08ab1932954e09e3c2cb2bc6e36d"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "24272a5fffe651317dfccd3a54a8784503968e77245cbe08b0bdff7f9a39a67a"
+  input-imports = [
+    "github.com/disintegration/imaging",
+    "github.com/go-ini/ini",
+    "github.com/pixiv/go-libjpeg/jpeg",
+    "github.com/stretchr/testify/require",
+    "github.com/xor-gate/goexif2/exif",
+    "github.com/xor-gate/goexif2/tiff",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -339,21 +339,14 @@ func readImageInfo(filename, input string) mfg.MetaJsonImage {
 	if orientation, err := x.Get(exif.Orientation); err == nil {
 		if orientationVal, err := orientation.Int(0); err == nil {
 			// http://jpegclub.org/exif_orientation.html
-			switch orientationVal {
-			case 3:
-			case 4:
+			if orientationVal == 3 || orientationVal == 4 {
 				imageMeta.Rotate = mfg.ROTATE_180
-				break
-			case 5:
-			case 6:
+			} else if orientationVal == 5 || orientationVal == 6 {
 				imageMeta.Rotate = mfg.ROTATE_270
 				imageMeta.Width, imageMeta.Height = imageMeta.Height, imageMeta.Width
-				break
-			case 7:
-			case 8:
+			} else if orientationVal == 7 || orientationVal == 8 {
 				imageMeta.Rotate = mfg.ROTATE_90
 				imageMeta.Width, imageMeta.Height = imageMeta.Height, imageMeta.Width
-				break
 			}
 		}
 	}
